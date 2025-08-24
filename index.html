@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mindful Moments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slide-up {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+      .animate-slide-up { animation: slide-up 0.6s ease-out forwards; }
+      .animation-delay-200 { animation-delay: 0.2s; }
+      .animation-delay-400 { animation-delay: 0.4s; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
+  }
+}
+</script>
+<!-- Babel for in-browser JSX transpilation -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import ReactDOM from 'react-dom/client';
+
+// From constants.ts
+const WALLPAPERS = [
+  'https://images.unsplash.com/photo-1499002238440-d264edd596ec?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1488330890490-c291ecf62571?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2560&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1433838552652-f9a46b332c40?q=80&w=2560&auto=format&fit=crop'
+];
+
+// From components/CountdownTimer.tsx
+const CountdownTimer = ({ durationInSeconds, onComplete }) => {
+  const [remainingSeconds, setRemainingSeconds] = useState(durationInSeconds);
+
+  useEffect(() => {
+    if (remainingSeconds <= 0) {
+      onComplete();
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setRemainingSeconds(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [remainingSeconds, onComplete]);
+
+  const radius = 80;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (durationInSeconds - remainingSeconds) / durationInSeconds;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+
+  return (
+    <div className="relative flex items-center justify-center w-52 h-52">
+      <svg className="w-full h-full" viewBox="0 0 200 200">
+        <circle
+          cx="100"
+          cy="100"
+          r={radius}
+          stroke="rgba(255, 255, 255, 0.2)"
+          strokeWidth="10"
+          fill="transparent"
+        />
+        <circle
+          cx="100"
+          cy="100"
+          r={radius}
+          stroke="white"
+          strokeWidth="10"
+          fill="transparent"
+          strokeLinecap="round"
+          transform="rotate(-90 100 100)"
+          style={{
+            strokeDasharray: circumference,
+            strokeDashoffset: strokeDashoffset,
+            transition: 'stroke-dashoffset 1s linear'
+          }}
+        />
+      </svg>
+      <div className="absolute text-center">
+        <span className="text-5xl font-bold text-white tracking-widest">
+          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// From components/MeditateModal.tsx
+const MeditateModal = ({ onDismiss }) => {
+  const [modalState, setModalState] = useState('SELECTING');
+  const [duration, setDuration] = useState(0);
+
+  const handleSelectDuration = (minutes) => {
+    setDuration(minutes * 60);
+    setModalState('COUNTING');
+  };
+
+  const handleComplete = () => {
+    setModalState('COMPLETED');
+  };
+  
+  const renderContent = () => {
+    switch(modalState) {
+      case 'SELECTING':
+        return (
+          <>
+            <h2 className="text-6xl md:text-8xl font-bold text-white drop-shadow-2xl animate-slide-up">
+              Time for a moment of peace.
+            </h2>
+            <p className="text-white/80 mt-4 text-xl animate-slide-up animation-delay-200">
+              How long would you like to meditate?
+            </p>
+            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up animation-delay-400">
+              {[1, 5, 10].map(minutes => (
+                <button
+                  key={minutes}
+                  onClick={() => handleSelectDuration(minutes)}
+                  className="px-8 py-4 w-48 bg-white/20 border border-white/30 rounded-full text-white text-lg font-semibold hover:bg-white/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50"
+                >
+                  {minutes} Minute{minutes > 1 ? 's' : ''}
+                </button>
+              ))}
+            </div>
+             <button
+                onClick={onDismiss}
+                className="mt-8 text-white/60 hover:text-white transition-colors duration-300"
+              >
+                Not right now
+              </button>
+          </>
+        );
+      case 'COUNTING':
+        return (
+          <div className="flex flex-col items-center justify-center">
+            <CountdownTimer durationInSeconds={duration} onComplete={handleComplete} />
+            <p className="text-white/80 mt-8 text-xl">
+              Focus on your breath.
+            </p>
+          </div>
+        );
+      case 'COMPLETED':
+        return (
+          <>
+            <h2 className="text-6xl md:text-8xl font-bold text-white drop-shadow-2xl animate-slide-up">
+              Well done.
+            </h2>
+            <p className="text-white/80 mt-4 text-xl animate-slide-up animation-delay-200">
+              Carry this peace with you.
+            </p>
+            <button
+              onClick={onDismiss}
+              className="mt-12 px-8 py-4 bg-white/20 border border-white/30 rounded-full text-white text-lg font-semibold hover:bg-white/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 animate-slide-up animation-delay-400"
+            >
+              Finish
+            </button>
+          </>
+        );
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl flex items-center justify-center z-50 animate-fade-in">
+      <div className="text-center p-8">
+        {renderContent()}
+      </div>
+    </div>
+  );
+};
+
+// From components/CustomSessionForm.tsx
+const CustomSessionForm = ({ onSchedule, isWaiting }) => {
+  const [duration, setDuration] = useState('120'); // Default to 2 hours
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const minutes = parseInt(duration, 10);
+    if (!isNaN(minutes) && minutes > 0) {
+      onSchedule(minutes);
+    }
+  };
+
+  return (
+    <div className="mt-8 border-t border-white/20 pt-6">
+        <p className="text-white/80 mb-4">Or start a new session?</p>
+      <form onSubmit={handleSubmit} className="flex items-center justify-center space-x-2">
+        <label htmlFor="duration-minutes" className="sr-only">Duration in minutes</label>
+        <input
+          id="duration-minutes"
+          type="number"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          min="1"
+          className="w-24 px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 text-center"
+          placeholder="minutes"
+        />
+        <button
+          type="submit"
+          disabled={!isWaiting}
+          className="px-5 py-2 bg-white/20 border border-white/30 rounded-md text-white font-semibold hover:bg-white/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Start
+        </button>
+      </form>
+      <p className="text-xs text-white/50 mt-2">Remind me within the next {duration || '...'} minutes.</p>
+    </div>
+  );
+};
+
+// From components/TimeDisplay.tsx
+const TimeDisplay = ({ nextReminder }) => {
+    if (!nextReminder) {
+        return null;
+    }
+
+    const formattedTime = nextReminder.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    return (
+        <div className="mt-2">
+            <p className="text-xl text-white/90 drop-shadow">
+                Next moment is scheduled for{' '}
+                <span className="font-bold text-2xl">{formattedTime}</span>
+            </p>
+        </div>
+    );
+};
+
+// From components/StatusDisplay.tsx
+const StatusDisplay = ({ status }) => {
+    let text = 'Initializing...';
+    if (status === 'WAITING') {
+        text = 'Awaiting a random moment of peace.';
+    } else if (status === 'CUSTOM_WAITING') {
+        text = 'Your custom session is active.';
+    }
+
+    return (
+        <p className="text-lg mt-4 text-white/80 drop-shadow">{text}</p>
+    );
+};
+
+// From App.tsx
+function App() {
+  const [status, setStatus] = useState('IDLE');
+  const [nextReminder, setNextReminder] = useState(null);
+  const [timeoutId, setTimeoutId] = useState(null);
+  const [currentBgIndex, setCurrentBgIndex] = useState(0);
+  const [showNextReminder, setShowNextReminder] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const backgrounds = useMemo(() => WALLPAPERS, []);
+
+  useEffect(() => {
+    // Preload images for smoother transitions
+    backgrounds.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [backgrounds]);
+
+  useEffect(() => {
+    // Cycle through backgrounds every 30 seconds
+    const intervalId = setInterval(() => {
+      setCurrentBgIndex((prevIndex) => (prevIndex + 1) % backgrounds.length);
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [backgrounds.length]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+
+  const clearReminder = useCallback(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setTimeoutId(null);
+    }
+  }, [timeoutId]);
+
+  const triggerMeditation = useCallback(() => {
+    setStatus('MEDITATE');
+    setNextReminder(null);
+    if ('vibrate' in navigator) {
+      navigator.vibrate(200);
+    }
+    // Change background when it's time to meditate
+    setCurrentBgIndex((prevIndex) => (prevIndex + 1) % backgrounds.length);
+  }, [backgrounds.length]);
+  
+  const scheduleNextDefaultReminder = useCallback(() => {
+    setShowNextReminder(false);
+    clearReminder();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const morningStart = new Date(today.getTime());
+    morningStart.setHours(9, 0, 0, 0);
+
+    const morningEnd = new Date(today.getTime());
+    morningEnd.setHours(12, 0, 0, 0);
+
+    const afternoonStart = new Date(today.getTime());
+    afternoonStart.setHours(13, 0, 0, 0);
+
+    const afternoonEnd = new Date(today.getTime());
+    afternoonEnd.setHours(17, 0, 0, 0);
+
+    const tomorrowMorningStart = new Date(today.getTime());
+    tomorrowMorningStart.setDate(today.getDate() + 1);
+    tomorrowMorningStart.setHours(9, 0, 0, 0);
+
+    let startRange;
+    let endRange;
+
+    if (now >= morningStart && now < morningEnd) {
+      startRange = now;
+      endRange = morningEnd;
+    } else if (now >= afternoonStart && now < afternoonEnd) {
+      startRange = now;
+      endRange = afternoonEnd;
+    } else if (now < morningStart) {
+      startRange = morningStart;
+      endRange = morningEnd;
+    } else if (now >= morningEnd && now < afternoonStart) {
+      startRange = afternoonStart;
+      endRange = afternoonEnd;
+    } else {
+      startRange = tomorrowMorningStart;
+      endRange = new Date(tomorrowMorningStart.getTime());
+      endRange.setHours(12, 0, 0, 0);
+    }
+
+    const startTime = startRange.getTime();
+    const endTime = endRange.getTime();
+    const randomTime = startTime + Math.random() * (endTime - startTime);
+    const reminderDate = new Date(randomTime);
+    
+    setNextReminder(reminderDate);
+    setStatus('WAITING');
+    
+    const delay = reminderDate.getTime() - new Date().getTime();
+    const newTimeoutId = window.setTimeout(triggerMeditation, delay);
+    setTimeoutId(newTimeoutId);
+  }, [clearReminder, triggerMeditation]);
+
+  const scheduleCustomReminder = useCallback((minutes) => {
+    setShowNextReminder(false);
+    clearReminder();
+    const now = new Date().getTime();
+    const randomDelay = Math.random() * minutes * 60 * 1000;
+    const reminderDate = new Date(now + randomDelay);
+    
+    setNextReminder(reminderDate);
+    setStatus('CUSTOM_WAITING');
+    
+    const newTimeoutId = window.setTimeout(triggerMeditation, randomDelay);
+    setTimeoutId(newTimeoutId);
+  }, [clearReminder, triggerMeditation]);
+
+
+  useEffect(() => {
+    scheduleNextDefaultReminder();
+  }, [scheduleNextDefaultReminder]);
+
+  const handleDismiss = () => {
+    setStatus('IDLE');
+    scheduleNextDefaultReminder();
+  };
+  
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const EnterFullscreenIcon = (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m0 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m0 0v-4m0 4l-5-5" />
+    </svg>
+  );
+
+  const ExitFullscreenIcon = (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 14h6v6m-6-6l7 7M20 10h-6V4m6 6l-7-7" />
+    </svg>
+  );
+
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black bg-cover bg-center transition-all duration-1000 ease-in-out"
+        style={{ backgroundImage: `url(${backgrounds[currentBgIndex]})` }}
+      />
+      
+      <button
+        onClick={toggleFullScreen}
+        className="fixed top-4 right-4 z-50 p-3 rounded-full bg-black/30 text-white hover:bg-black/50 backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50"
+        aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+        title={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+      >
+        {isFullscreen ? ExitFullscreenIcon : EnterFullscreenIcon}
+      </button>
+
+      <div className="relative min-h-screen flex items-center justify-center p-4 text-white font-light">
+        <div className="w-full max-w-md text-center">
+            <div className="p-8 rounded-2xl bg-black/30 backdrop-blur-xl border border-white/20 shadow-2xl">
+                <h1 className="text-5xl font-bold tracking-tight drop-shadow-lg">Mindful Moments</h1>
+                <StatusDisplay status={status} />
+                
+                {status.endsWith('WAITING') && !showNextReminder && (
+                  <button
+                    onClick={() => setShowNextReminder(true)}
+                    className="mt-4 px-6 py-2 bg-white/10 border border-white/20 rounded-full text-white font-semibold hover:bg-white/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-controls="next-reminder-time"
+                    aria-expanded="false"
+                  >
+                    When is my next moment?
+                  </button>
+                )}
+
+                <div id="next-reminder-time" aria-live="polite">
+                  {showNextReminder && <TimeDisplay nextReminder={nextReminder} />}
+                </div>
+
+                <CustomSessionForm onSchedule={scheduleCustomReminder} isWaiting={status.endsWith('WAITING')} />
+            </div>
+        </div>
+      </div>
+      {status === 'MEDITATE' && <MeditateModal onDismiss={handleDismiss} />}
+    </>
+  );
+}
+
+// From index.tsx
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
+}
+
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
