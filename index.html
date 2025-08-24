@@ -41,7 +41,7 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="text/babel" data-type="module">
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
 // From constants.ts
@@ -277,7 +277,7 @@ const StatusDisplay = ({ status }) => {
 function App() {
   const [status, setStatus] = useState('IDLE');
   const [nextReminder, setNextReminder] = useState(null);
-  const [timeoutId, setTimeoutId] = useState(null);
+  const timeoutIdRef = useRef(null);
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
   const [showNextReminder, setShowNextReminder] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -311,11 +311,11 @@ function App() {
 
 
   const clearReminder = useCallback(() => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      setTimeoutId(null);
+    if (timeoutIdRef.current) {
+      clearTimeout(timeoutIdRef.current);
+      timeoutIdRef.current = null;
     }
-  }, [timeoutId]);
+  }, []);
 
   const triggerMeditation = useCallback(() => {
     setStatus('MEDITATE');
@@ -379,8 +379,7 @@ function App() {
     setStatus('WAITING');
     
     const delay = reminderDate.getTime() - new Date().getTime();
-    const newTimeoutId = window.setTimeout(triggerMeditation, delay);
-    setTimeoutId(newTimeoutId);
+    timeoutIdRef.current = window.setTimeout(triggerMeditation, delay);
   }, [clearReminder, triggerMeditation]);
 
   const scheduleCustomReminder = useCallback((minutes) => {
@@ -393,8 +392,7 @@ function App() {
     setNextReminder(reminderDate);
     setStatus('CUSTOM_WAITING');
     
-    const newTimeoutId = window.setTimeout(triggerMeditation, randomDelay);
-    setTimeoutId(newTimeoutId);
+    timeoutIdRef.current = window.setTimeout(triggerMeditation, randomDelay);
   }, [clearReminder, triggerMeditation]);
 
 
